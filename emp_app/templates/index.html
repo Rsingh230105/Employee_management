@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 50px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 40px;
+            font-size: 2.5em;
+        }
+
+        .button-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 40px 0;
+        }
+
+        .btn {
+            padding: 20px 30px;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: block;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-add {
+            background-color: #4CAF50;
+        }
+
+        .btn-add:hover {
+            background-color: #45a049;
+        }
+
+        .btn-remove {
+            background-color: #f44336;
+        }
+
+        .btn-remove:hover {
+            background-color: #da190b;
+        }
+
+        .btn-filter {
+            background-color: #2196F3;
+        }
+
+        .btn-filter:hover {
+            background-color: #1976D2;
+        }
+
+        .btn-all {
+            background-color: #FF9800;
+        }
+
+        .btn-all:hover {
+            background-color: #F57C00;
+        }
+
+        .icon {
+            margin-right: 10px;
+            font-size: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .button-container {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .btn {
+                padding: 15px 20px;
+                font-size: 16px;
+            }
+        }
+
+        .footer {
+            margin-top: 40px;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Employee Management System</h1>
+
+        <div class="button-container">
+            <button class="btn btn-add" onclick="addEmployee()">
+                <span class="icon">➕</span>
+                Add Employee
+            </button>
+
+            <button class="btn btn-remove" onclick="removeEmployee()">
+                <span class="icon">➖</span>
+                Remove Employee
+            </button>
+
+            <button class="btn btn-filter" onclick="filterEmployee()">
+                <span class="icon">🔍</span>
+                Filter Employees
+            </button>
+
+            <button class="btn btn-all" onclick="showAllEmployees()">
+                <span class="icon">👥</span>
+                All Employees
+            </button>
+        </div>
+
+        <div class="footer">
+            <p>Simple Employee Management Dashboard</p>
+        </div>
+    </div>
+
+    <script>
+        function addEmployee() {
+            window.location.href = "{% url 'add_emp' %}";
+        }
+
+        function removeEmployee() {
+            window.location.href = "{% url 'remove_emp' %}";
+        }
+
+        function filterEmployee() {
+            window.location.href = "{% url 'filter_emp' %}";
+        }
+
+        function showAllEmployees() {
+            window.location.href = "{% url 'all_emp' %}";
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Employee</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Add An Employee</h1>
+        <hr>
+
+        {% if error %}
+            <div class="alert alert-danger" role="alert">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        <form action="/add_emp" method="post" class="needs-validation" novalidate>
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label for="first_name">First Name *</label><br>
+                <input type="text" id="first_name" name="first_name" value="{{first_name}}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="last_name">Last Name *</label><br>
+                <input type="text" id="last_name" name="last_name" value="{{last_name}}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="salary">Salary *</label><br>
+                <input type="number"id="salary" name="salary" value="{{salary}}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="dept">Department</label><br>
+                <input type="text"  id="dept" name="dept" value="{{dept}}">
+            </div>
+
+            <div class="form-group">
+                <label for="role">Role</label><br>
+                <input type="text"  id="role" name="role" value="{{role}}">
+            </div>
+
+            <div class="form-group">
+                <label for="bonus">Bonus</label><br>
+                <input type="number"  id="bonus" name="bonus" value="{{bonus}}">
+            </div>
+
+            <div class="form-group">
+                <label for="phone_number">Phone Number *</label><br>
+                <input type="tel"  id="phone_number" name="phone_number" value="{{phone_number}}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="hire_date">Hire Date</label><br>
+                <input type="date"  id="hire_date" name="hire_date" value="{{hire_date}}">
+            </div>
+
+            <hr>
+            <button type="submit" class="btn btn-primary">Submit</button>
+            <a href="/all_emp" class="btn btn-secondary ml-2">Cancel</a>
+        </form>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+</body>
+</html>
