@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Employee Manager{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+        }
+        .sidebar .nav-link {
+            color: #333;
+            padding: .75rem 1rem;
+            border-radius: .25rem;
+            margin: .25rem 0;
+        }
+        .sidebar .nav-link:hover {
+            background-color: rgba(0, 123, 255, .1);
+        }
+        .sidebar .nav-link.active {
+            background-color: rgba(0, 123, 255, .2);
+        }
+        .main-content {
+            padding: 2rem;
+        }
+        .card {
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            border: none;
+            margin-bottom: 1rem;
+        }
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .page-header {
+            padding-bottom: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .avatar-sm {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        .table-compact tbody tr td, .table-compact thead th { padding: .45rem .5rem; vertical-align: middle; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="{% url 'index' %}">
+                    <i class="fas fa-users-cog me-2"></i>EmployeeSys
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        {% if user.is_authenticated %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'all_emp' %}">
+                                    <i class="fas fa-users me-1"></i> Employees
+                                </a>
+                            </li>
+                            {% if user.is_staff %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'add_emp' %}">
+                                    <i class="fas fa-user-plus me-1"></i> Add Employee
+                                </a>
+                            </li>
+                            {% endif %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="userMenu" role="button" 
+                                   data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-user-circle me-1"></i>
+                                    {{ user.username }}
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
+                                    {% if user.is_staff %}
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'admin:index' %}">
+                                                <i class="fas fa-cog me-2"></i>Admin Panel
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                    {% endif %}
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'logout' %}">
+                                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        {% else %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'login' %}">
+                                    <i class="fas fa-sign-in-alt me-1"></i> Login
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="{% url 'index' %}">
+                                <i class="fas fa-home me-2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'all_emp' in request.path %}active{% endif %}" href="{% url 'all_emp' %}">
+                                <i class="fas fa-users me-2"></i> All Employees
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'add_emp' in request.path %}active{% endif %}" href="{% url 'add_emp' %}">
+                                <i class="fas fa-user-plus me-2"></i> Add Employee
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <div class="page-header">
+                    <h2>{% block page_title %}{% endblock %}</h2>
+                </div>
+
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    {% block extra_js %}{% endblock %}
+
+    <script>
+    // Client-side validation for resume/profile file inputs
+    (function(){
+        const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+    const ALLOWED_EXT = ['.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg'];
+
+        function showAlert(message, type='danger'){
+            const container = document.querySelector('.main-content');
+            if(!container) return alert(message);
+            const div = document.createElement('div');
+            div.className = `alert alert-${type} alert-dismissible fade show`;
+            div.role = 'alert';
+            div.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+            container.prepend(div);
+        }
+
+        function validateFileInput(input){
+            if(!input || !input.files || input.files.length===0) return true;
+            for(let i=0;i<input.files.length;i++){
+                const f = input.files[i];
+                if(f.size > MAX_BYTES){
+                    return `File ${f.name} is too large. Max ${MAX_BYTES/1024/1024} MB.`;
+                }
+                const name = f.name.toLowerCase();
+                if(!ALLOWED_EXT.some(ext => name.endsWith(ext))){
+                    return `File ${f.name} has unsupported type. Allowed: ${ALLOWED_EXT.join(', ')}`;
+                }
+            }
+            return true;
+        }
+
+        // Attach to forms with multipart/form-data
+        document.addEventListener('DOMContentLoaded', function(){
+            document.querySelectorAll('form[enctype="multipart/form-data"]').forEach(form=>{
+                form.addEventListener('submit', function(e){
+                    const resume = form.querySelector('input[name="resume"]');
+                    const profile = form.querySelector('input[name="profile_picture"]');
+                    let ok = validateFileInput(resume);
+                    if(ok !== true){ e.preventDefault(); showAlert(ok); return false; }
+                    ok = validateFileInput(profile);
+                    if(ok !== true){ e.preventDefault(); showAlert(ok); return false; }
+                });
+            });
+        });
+    })();
+    </script>
+        <!-- Resume preview modal -->
+        <div class="modal fade" id="resumePreviewModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Resume Preview</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-0">
+                        <iframe id="resumePreviewFrame" src="" style="width:100%;height:80vh;border:none;"></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        // Function to open resume in modal (works for PDF and other browser-supported file types)
+        function openResumePreview(url){
+            if(!url){
+                alert('No resume available to preview.');
+                return;
+            }
+            const frame = document.getElementById('resumePreviewFrame');
+            // Use a cache-busting query param to avoid stale iframe in some browsers
+            frame.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 'preview=1';
+            const modalEl = document.getElementById('resumePreviewModal');
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+        </script>
+</body>
+</html>

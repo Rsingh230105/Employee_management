@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ employee.get_full_name }} - Employee Details{% endblock %}
+
+{% block page_title %}Employee Details{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Employee Profile Card -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                {% if employee.profile_picture %}
+                    <img src="{{ employee.profile_picture.url }}" alt="{{ employee.get_full_name }}" 
+                         class="rounded-circle img-thumbnail mb-3" style="width: 150px; height: 150px;">
+                {% else %}
+                    <i class="fas fa-user-circle fa-6x mb-3 text-secondary"></i>
+                {% endif %}
+                <h3 class="card-title">{{ employee.get_full_name }}</h3>
+                <p class="text-muted mb-1">{{ employee.role.name }}</p>
+                <p class="text-muted mb-3">{{ employee.dept.name }}</p>
+                
+                <div class="d-flex justify-content-center mb-3">
+                    <a href="{% url 'edit_emp' employee.id %}" class="btn btn-primary me-2">
+                        <i class="fas fa-edit me-1"></i> Edit
+                    </a>
+                    <a href="{% url 'remove_emp' employee.id %}" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i> Delete
+                    </a>
+                </div>
+                
+                <div class="d-flex justify-content-center">
+                    <a href="mailto:{{ employee.email }}" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-envelope"></i>
+                    </a>
+                    <a href="tel:{{ employee.phone }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-phone"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employee Details -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Personal Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-3">
+                        <p class="mb-0 text-muted">Employee ID</p>
+                    </div>
+                    <div class="col-sm-9">
+                        <p class="mb-0">{{ employee.employee_id }}</p>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-3">
+                        <p class="mb-0 text-muted">Email</p>
+                    </div>
+                    <div class="col-sm-9">
+                        <p class="mb-0">{{ employee.email }}</p>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-3">
+                        <p class="mb-0 text-muted">Phone</p>
+                    </div>
+                    <div class="col-sm-9">
+                        <p class="mb-0">{{ employee.phone }}</p>
+                    </div>
+                </div>
+                {% if employee.date_of_birth %}
+                <hr>
+                <div class="row">
+                    <div class="col-sm-3">
+                        <p class="mb-0 text-muted">Date of Birth</p>
+                    </div>
+                    <div class="col-sm-9">
+                        <p class="mb-0">{{ employee.date_of_birth }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                {% if employee.resume %}
+                <hr>
+                <div class="row">
+                    <div class="col-sm-3">
+                        <p class="mb-0 text-muted">Resume</p>
+                    </div>
+                    <div class="col-sm-9">
+                        <p class="mb-0">
+                            <button class="btn btn-sm btn-outline-primary me-2" onclick="openResumePreview('{{ employee.resume.url }}')">Preview</button>
+                            <a class="btn btn-sm btn-outline-secondary" href="{{ employee.resume.url }}" target="_blank">Download Resume</a>
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+                {% if employee.address %}
+                <hr>
+                <div class="row">
+                    <div class="col-sm-3">
+                        <p class="mb-0 text-muted">Address</p>
+                    </div>
+                    <div class="col-sm-9">
+                        <p class="mb-0">{{ employee.address }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Employment Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-3">
+                        <p class="mb-0 text-muted">Department</p>
+                    </div>
+                    <div class="col-sm-9">
+                        <p class="mb-0">{{ employee.dept.name }}</p>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-3">
+                        <p class="mb-0 text-muted">Role</p>
+                    </div>
+                    <div class="col-sm-9">
+                        <p class="mb-0">{{ employee.role.name }}</p>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-3">
+                        <p class="mb-0 text-muted">Status</p>
+                    </div>
+                    <div class="col-sm-9">
+                        <span class="badge {% if employee.employment_status == 'FT' %}bg-success{% elif employee.employment_status == 'PT' %}bg-info{% elif employee.employment_status == 'CT' %}bg-warning{% else %}bg-secondary{% endif %}">
+                            {{ employee.get_employment_status_display }}
+                        </span>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-3">
+                        <p class="mb-0 text-muted">Hire Date</p>
+                    </div>
+                    <div class="col-sm-9">
+                        <p class="mb-0">{{ employee.hire_date }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if employee.emergency_contact_name %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Emergency Contact</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-3">
+                        <p class="mb-0 text-muted">Name</p>
+                    </div>
+                    <div class="col-sm-9">
+                        <p class="mb-0">{{ employee.emergency_contact_name }}</p>
+                    </div>
+                </div>
+                {% if employee.emergency_contact_phone %}
+                <hr>
+                <div class="row">
+                    <div class="col-sm-3">
+                        <p class="mb-0 text-muted">Phone</p>
+                    </div>
+                    <div class="col-sm-9">
+                        <p class="mb-0">{{ employee.emergency_contact_phone }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                {% if employee.emergency_contact_relation %}
+                <hr>
+                <div class="row">
+                    <div class="col-sm-3">
+                        <p class="mb-0 text-muted">Relationship</p>
+                    </div>
+                    <div class="col-sm-9">
+                        <p class="mb-0">{{ employee.emergency_contact_relation }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

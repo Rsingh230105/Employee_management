@@ -1,138 +1,239 @@
-from django.http import HttpResponse
-from django.shortcuts import render, redirect
-from .models import Employee, Role, Department
-from datetime import datetime
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, TemplateView
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.views import LoginView
+from django.contrib.auth.decorators import login_required
+from django.urls import reverse_lazy
 from django.db.models import Q
+from django.contrib import messages
+from django.http import HttpResponse
+import csv
+import xlsxwriter
+from io import BytesIO
+from .models import Employee, Department, Role, Address
+from .forms import EmployeeForm, LoginForm
 
-# Create your views here.
-def index(request):
-    return render(request, 'index.html')
+class CustomLoginView(LoginView):
+    form_class = LoginForm
+    template_name = 'registration/login.html'
+    redirect_authenticated_user = True
 
+class IndexView(LoginRequiredMixin, TemplateView):
+    template_name = "index.html"
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['total_employees'] = Employee.objects.count()
+        context['departments'] = Department.objects.all()
+        context['roles'] = Role.objects.all()
+        return context
 
-def all_emp(request):
-    emps = Employee.objects.all()
-    context = {
-        'emps': emps
-    }
-    print(context)
-    return render(request, 'all_emp.html', context)
+class EmployeeListView(LoginRequiredMixin, ListView):
+    model = Employee
+    template_name = "all_emp.html"
+    context_object_name = "emps"
+    paginate_by = 10
 
+    def get_queryset(self):
+        qs = super().get_queryset().select_related("dept", "role").order_by("-created_at")
+        q = self.request.GET.get("q", "").strip()
+        dept = self.request.GET.get("dept", "").strip()
+        role = self.request.GET.get("role", "").strip()
+        status = self.request.GET.get("status", "").strip()
 
-def add_emp(request):
-    if request.method == "POST":
-        try:
-            # Use .get() method to safely access POST data
-            first_name = request.POST.get('first_name', '')
-            last_name = request.POST.get('last_name', '')
-            salary = request.POST.get('salary', 0)
-            dept_name = request.POST.get('dept', '')  # Changed from 'department' to 'dept'
-            role_name = request.POST.get('role', '')
-            bonus = request.POST.get('bonus', 0)
-            hire_date = request.POST.get('hire_date', '')
-            phone = request.POST.get('phone_number', '')
-
-            # Validate required fields
-            if not all([first_name, last_name, salary]):
-                return HttpResponse("Please fill in all required fields")
-
-            # Convert fields to appropriate types
-            salary = int(salary) if salary else 0
-            bonus = int(bonus) if bonus else 0
-
-            # Handle phone number (it might be empty)
-            if phone and phone.strip():
-                try:
-                    phone = int(phone)
-                except ValueError:
-                    phone = 0  # or use a default value
-            else:
-                phone = 0  # Use 0 as default instead of None
-
-            # Handle hire_date
-            if hire_date:
-                hire_date = datetime.strptime(hire_date, '%Y-%m-%d').date()
-            else:
-                hire_date = datetime.now().date()
-
-            # Get or create Department and Role objects
-            try:
-                dept = Department.objects.get(name=dept_name)
-            except Department.DoesNotExist:
-                # Create new department if it doesn't exist
-                dept = Department.objects.create(name=dept_name, location="Unknown")
-
-            try:
-                role = Role.objects.get(name=role_name)
-            except Role.DoesNotExist:
-                # Create new role if it doesn't exist
-                role = Role.objects.create(name=role_name)
-
-            # Create and save the employee
-            new_emp = Employee(
-                first_name=first_name,
-                last_name=last_name,
-                salary=salary,
-                bonus=bonus,
-                phone=phone,
-                dept=dept,
-                role=role,
-                hire_date=hire_date
+        if q:
+            qs = qs.filter(
+                Q(first_name__icontains=q) | 
+                Q(last_name__icontains=q) |
+                Q(employee_id__icontains=q) |
+                Q(email__icontains=q)
             )
-            new_emp.save()
-
-            return HttpResponse('Employee Added Successfully')
-
-        except ValueError as e:
-            return HttpResponse(f"Invalid data provided: {str(e)}")
-        except Exception as e:
-            return HttpResponse(f"An error occurred: {str(e)}")
-
-    elif request.method == "GET":
-        return render(request, 'add_emp.html')
-    else:
-        return HttpResponse("An error occurred")
-
-
-
-def remove_emp(request, emp_id=None):
-    if emp_id:
-        # Handle the actual removal
-        try:
-            emp = Employee.objects.get(id=emp_id)
-            emp_name = f"{emp.first_name} {emp.last_name}"
-            emp.delete()
-            return HttpResponse(f"Employee {emp_name} removed successfully!")
-        except Employee.DoesNotExist:
-            return HttpResponse("Employee not found!")
-    else:
-        # Display the list of employees to remove
-        emps = Employee.objects.all()
-        context = {
-            'emps': emps
-        }
-        return render(request, 'remove_emp.html', context)
-
-
-def filter_emp(request):
-    if request.method == "POST":
-        name = request.POST['name']
-        dept= request.POST['dept']
-        role = request.POST['role']
-        emps = Employee.objects.all()
-
-        if name:
-            emps = emps.filter(Q(first_name__icontains=name)| Q(last_name__icontains=name))
         if dept:
-            emps = emps.filter(dept__name=dept)
+            qs = qs.filter(dept__name__iexact=dept)
         if role:
-            emps = emps.filter(role__name=role)
+            qs = qs.filter(role__name__iexact=role)
+        if status:
+            qs = qs.filter(employment_status=status)
+        return qs
 
-        context = {
-            'emps': emps
-        }
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["departments"] = Employee.objects.values_list("dept__name", flat=True).distinct()
+        ctx["roles"] = Employee.objects.values_list("role__name", flat=True).distinct()
+        ctx["q"] = self.request.GET.get("q", "")
+        ctx["selected_dept"] = self.request.GET.get("dept", "")
+        ctx["selected_role"] = self.request.GET.get("role", "")
+        ctx["selected_status"] = self.request.GET.get("status", "")
+        return ctx
 
-        return render(request, 'all_emp.html',context)
-    elif request.method == "GET":
-        return render(request, 'filter_emp.html')
-    else:
-        return HttpResponse("An error occurred")
+class EmployeeDetailView(LoginRequiredMixin, DetailView):
+    model = Employee
+    template_name = "view_emp.html"
+    context_object_name = "employee"
+
+class EmployeeCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+    model = Employee
+    form_class = EmployeeForm
+    template_name = "add_emp.html"
+    success_url = reverse_lazy("all_emp")
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def form_valid(self, form):
+        # Convert address_input into Address FK
+        address_text = form.cleaned_data.get('address_input', '').strip()
+        if address_text:
+            # Try to find exact match; if none, create a new Address with the text in the street field
+            addr_obj = Address.objects.filter(street__iexact=address_text).first()
+            if not addr_obj:
+                addr_obj = Address.objects.create(street=address_text, city='', state='', postal_code='', country='')
+            # assign to the instance before saving
+            form.instance.address = addr_obj
+
+        response = super().form_valid(form)
+        messages.success(self.request, f"Employee {self.object.get_full_name()} has been added successfully.")
+        return response
+
+    def form_invalid(self, form):
+        # Surface form errors to the user to aid debugging when creation fails
+        errors = []
+        for f, err in form.errors.items():
+            errors.append(f"{f}: {', '.join(err)}")
+        if errors:
+            messages.error(self.request, 'Could not create employee: ' + ' | '.join(errors))
+        else:
+            messages.error(self.request, 'Could not create employee: unknown validation error.')
+        return super().form_invalid(form)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        # Provide existing addresses for datalist suggestions
+        ctx['address_suggestions'] = Address.objects.values_list('street', flat=True).distinct()[:200]
+        return ctx
+
+class EmployeeUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = Employee
+    form_class = EmployeeForm
+    template_name = "edit_emp.html"
+    context_object_name = 'employee'
+    success_url = reverse_lazy("all_emp")
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def form_valid(self, form):
+        # Convert address_input into Address FK on update as well
+        address_text = form.cleaned_data.get('address_input', '').strip()
+        if address_text:
+            addr_obj = Address.objects.filter(street__iexact=address_text).first()
+            if not addr_obj:
+                addr_obj = Address.objects.create(street=address_text, city='', state='', postal_code='', country='')
+            form.instance.address = addr_obj
+
+        response = super().form_valid(form)
+        messages.success(self.request, f"Employee {self.object.get_full_name()} has been updated successfully.")
+        return response
+
+    def form_invalid(self, form):
+        errors = []
+        for f, err in form.errors.items():
+            errors.append(f"{f}: {', '.join(err)}")
+        if errors:
+            messages.error(self.request, 'Could not update employee: ' + ' | '.join(errors))
+        else:
+            messages.error(self.request, 'Could not update employee: unknown validation error.')
+        return super().form_invalid(form)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['address_suggestions'] = Address.objects.values_list('street', flat=True).distinct()[:200]
+        return ctx
+
+class EmployeeDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    model = Employee
+    template_name = "remove_emp.html"
+    success_url = reverse_lazy("all_emp")
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def delete(self, request, *args, **kwargs):
+        employee = self.get_object()
+        messages.success(request, f"Employee {employee.get_full_name()} has been removed successfully.")
+        return super().delete(request, *args, **kwargs)
+
+def export_employees_csv(request):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="employees.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['Employee ID', 'Name', 'Email', 'Phone', 'Department', 'Role', 
+                    'Status', 'Hire Date', 'Salary', 'Bonus'])
+    
+    employees = Employee.objects.select_related('dept', 'role').all()
+    for emp in employees:
+        writer.writerow([
+            emp.employee_id,
+            emp.get_full_name(),
+            emp.email,
+            emp.phone,
+            emp.dept.name,
+            emp.role.name,
+            emp.get_employment_status_display(),
+            emp.hire_date,
+            emp.salary,
+            emp.bonus
+        ])
+    
+    return response
+
+def export_employees_excel(request):
+    output = BytesIO()
+    workbook = xlsxwriter.Workbook(output)
+    worksheet = workbook.add_worksheet()
+    
+    # Add header formatting
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#0d6efd',
+        'color': 'white',
+        'border': 1
+    })
+    
+    # Write headers
+    headers = ['Employee ID', 'Name', 'Email', 'Phone', 'Department', 'Role', 
+              'Status', 'Hire Date', 'Salary', 'Bonus']
+    for col, header in enumerate(headers):
+        worksheet.write(0, col, header, header_format)
+    
+    # Write data
+    employees = Employee.objects.select_related('dept', 'role').all()
+    for row, emp in enumerate(employees, start=1):
+        data = [
+            emp.employee_id,
+            emp.get_full_name(),
+            emp.email,
+            emp.phone,
+            emp.dept.name,
+            emp.role.name,
+            emp.get_employment_status_display(),
+            emp.hire_date.strftime('%Y-%m-%d'),
+            emp.salary,
+            emp.bonus
+        ]
+        for col, value in enumerate(data):
+            worksheet.write(row, col, value)
+    
+    # Format columns
+    worksheet.set_column('A:J', 15)  # Set width for all columns
+    
+    workbook.close()
+    output.seek(0)
+    
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="employees.xlsx"'
+    
+    return response
