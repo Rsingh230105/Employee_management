@@ -1,5 +1,14 @@
 Django==5.2.6
-python-dotenv
-djangorestframework
-Pillow
-gunicorn
+python-dotenv==1.0.0
+djangorestframework==3.20.0
+Pillow==10.1.0
+gunicorn==21.2.0
+
+# Data & charting
+pandas==2.2.2
+numpy==1.26.3
+matplotlib==3.8.1
+
+# Excel support
+openpyxl==3.1.2
+xlrd==2.0.1

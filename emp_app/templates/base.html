@@ -227,17 +227,37 @@
 
         <script>
         // Function to open resume in modal (works for PDF and other browser-supported file types)
-        function openResumePreview(url){
+        function openResumePreview(url, title){
             if(!url){
                 alert('No resume available to preview.');
                 return;
             }
             const frame = document.getElementById('resumePreviewFrame');
-            // Use a cache-busting query param to avoid stale iframe in some browsers
-            frame.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 'preview=1';
             const modalEl = document.getElementById('resumePreviewModal');
+            const modalTitle = modalEl.querySelector('.modal-title');
+            if(title){ modalTitle.textContent = title; } else { modalTitle.textContent = 'Resume Preview'; }
+
+            // Use a cache-busting query param to avoid stale iframe in some browsers
+            const previewUrl = url + (url.indexOf('?') === -1 ? '?' : '&') + 'preview=1';
+            frame.src = previewUrl;
+
+            // Show modal immediately; if iframe fails to load (refused due to headers or browser), fallback to open in new tab
             const modal = new bootstrap.Modal(modalEl);
             modal.show();
+
+            // Fallback: if iframe hasn't loaded within 1500ms, open in new tab (helps when browser blocks embedding)
+            let loaded = false;
+            const onLoad = () => { loaded = true; };
+            frame.removeEventListener('load', onLoad);
+            frame.addEventListener('load', onLoad);
+
+            setTimeout(() => {
+                if(!loaded){
+                    // close modal and open in new tab as fallback
+                    modal.hide();
+                    window.open(url, '_blank');
+                }
+            }, 1500);
         }
         </script>
 </body>

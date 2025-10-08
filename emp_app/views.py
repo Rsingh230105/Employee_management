@@ -11,6 +11,15 @@ import xlsxwriter
 from io import BytesIO
 from .models import Employee, Department, Role, Address
 from .forms import EmployeeForm, LoginForm
+import pandas as pd
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import matplotlib.ticker as mtick
+import base64
+from io import BytesIO
 
 class CustomLoginView(LoginView):
     form_class = LoginForm
@@ -25,6 +34,113 @@ class IndexView(LoginRequiredMixin, TemplateView):
         context['total_employees'] = Employee.objects.count()
         context['departments'] = Department.objects.all()
         context['roles'] = Role.objects.all()
+
+        # Generate basic analytics charts using pandas + matplotlib and embed as base64 PNGs
+        qs = Employee.objects.all().values('hire_date', 'dept__name', 'salary')
+        if qs:
+            df = pd.DataFrame(list(qs))
+            # compute summary metrics
+            try:
+                salaries_series = pd.to_numeric(df['salary'].fillna(0))
+                context['avg_salary'] = int(salaries_series.mean()) if len(salaries_series) else 0
+            except Exception:
+                context['avg_salary'] = 0
+            # resumes count
+            context['resumes_count'] = Employee.objects.filter(resume__isnull=False).count()
+
+            # Set plotting rcParams (green palette) directly to avoid style file lookups
+            try:
+                plt.rcParams.update({
+                    'figure.facecolor': 'white',
+                    'axes.facecolor': 'white',
+                    'axes.edgecolor': '#333333',
+                    'axes.grid': True,
+                    'grid.color': '#e6f0ea',
+                    'grid.alpha': 0.6,
+                    'axes.titlesize': 12,
+                    'axes.labelsize': 10,
+                    'xtick.color': '#333333',
+                    'ytick.color': '#333333',
+                    'font.size': 9,
+                })
+            except Exception:
+                # ignore rcParam failures and use defaults
+                pass
+            primary_green = '#198754'
+            accent_green = '#2f9d5c'
+            light_green = '#a8e6cf'
+            # Hires by month
+            try:
+                df['hire_date'] = pd.to_datetime(df['hire_date'])
+                hires = df.groupby(df['hire_date'].dt.to_period('M')).size()
+                # Make hires chart wider and clearer: formatted date ticks and integer y-axis
+                fig, ax = plt.subplots(figsize=(9, 3.5), dpi=100)
+                hires.index = hires.index.to_timestamp()
+                ax.plot(hires.index, hires.values, marker='o', color=primary_green, linewidth=2)
+                ax.fill_between(hires.index, hires.values, color=light_green, alpha=0.45)
+                ax.set_title('Hires by Month')
+                ax.set_ylabel('Hires')
+                # Format x-axis as Month Year
+                ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+                ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
+                plt.setp(ax.get_xticklabels(), rotation=35, ha='right')
+                # Ensure y-axis shows integer ticks starting at 0
+                max_hires = int(hires.values.max()) if len(hires.values) else 0
+                ax.set_ylim(0, max_hires + 1)
+                ax.yaxis.set_major_locator(mtick.MaxNLocator(integer=True))
+                ax.grid(True, alpha=0.35)
+                # annotate points
+                for x, y in zip(hires.index, hires.values):
+                    ax.annotate(str(int(y)), xy=(x, y), xytext=(0, 6), textcoords='offset points', ha='center', fontsize=9)
+                buf = BytesIO(); fig.tight_layout(); fig.savefig(buf, format='png'); buf.seek(0)
+                context['chart_hires'] = base64.b64encode(buf.getvalue()).decode('utf-8')
+                plt.close(fig)
+            except Exception:
+                context['chart_hires'] = None
+
+            # Employees by department
+            try:
+                dept_counts = df['dept__name'].value_counts()
+                # Department counts: larger, rotated labels and bar annotations
+                fig, ax = plt.subplots(figsize=(8, 3.5), dpi=100)
+                colors = [accent_green if i % 2 == 0 else primary_green for i in range(len(dept_counts))]
+                bars = ax.bar(dept_counts.index.astype(str), dept_counts.values, color=colors, edgecolor='#ffffff')
+                ax.set_title('Employees by Department')
+                ax.set_ylabel('Count')
+                plt.setp(ax.get_xticklabels(), rotation=35, ha='right')
+                # annotate bars with counts
+                for bar in bars:
+                    h = int(bar.get_height())
+                    ax.annotate(str(h), xy=(bar.get_x() + bar.get_width() / 2, h), xytext=(0, 6), textcoords='offset points', ha='center', fontsize=9)
+                ax.yaxis.set_major_locator(mtick.MaxNLocator(integer=True))
+                buf = BytesIO(); fig.tight_layout(); fig.savefig(buf, format='png'); buf.seek(0)
+                context['chart_dept'] = base64.b64encode(buf.getvalue()).decode('utf-8')
+                plt.close(fig)
+            except Exception:
+                context['chart_dept'] = None
+
+            # Salary distribution
+            try:
+                salaries = pd.to_numeric(df['salary'].fillna(0))
+                # Salary distribution: better x-axis formatting with thousands separators
+                fig, ax = plt.subplots(figsize=(8, 3.5), dpi=100)
+                bins = min(10, max(3, int(len(salaries) / 2))) if len(salaries) > 0 else 10
+                ax.hist(salaries, bins=bins, color=accent_green, edgecolor='white')
+                ax.set_title('Salary Distribution')
+                ax.set_xlabel('Salary')
+                ax.set_ylabel('Number of Employees')
+                # Format x ticks with thousands separator
+                ax.xaxis.set_major_formatter(mtick.FuncFormatter(lambda x, pos: f"{int(x):,}"))
+                plt.setp(ax.get_xticklabels(), rotation=30, ha='right')
+                ax.grid(axis='y', alpha=0.35)
+                buf = BytesIO(); fig.tight_layout(); fig.savefig(buf, format='png'); buf.seek(0)
+                context['chart_salary'] = base64.b64encode(buf.getvalue()).decode('utf-8')
+                plt.close(fig)
+            except Exception:
+                context['chart_salary'] = None
+        else:
+            context['chart_hires'] = context['chart_dept'] = context['chart_salary'] = None
+
         return context
 
 class EmployeeListView(LoginRequiredMixin, ListView):

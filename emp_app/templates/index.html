@@ -9,12 +9,17 @@
 <div class="row">
     <div class="col-12">
         <div class="card p-4 mb-4 text-center">
-            <h1 class="mb-3">Employee Management System</h1>
-            <p class="text-muted">A modern, lightweight system to manage employees. Upload resumes, track departments and roles, and export data.</p>
-            <div class="d-flex justify-content-center gap-3 mt-3">
-                <a class="btn btn-success btn-lg" href="{% url 'add_emp' %}"><i class="fas fa-plus-circle me-2"></i> Add Employee</a>
-                <a class="btn btn-warning btn-lg" href="{% url 'all_emp' %}"><i class="fas fa-users me-2"></i> All Employees</a>
-                <a class="btn btn-info btn-lg" href="{% url 'all_emp' %}"><i class="fas fa-filter me-2"></i> Filter</a>
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h2 class="mb-1">Employee Management</h2>
+                    <p class="text-muted mb-0">Manage employees, track hiring, resumes and generate reports.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-success" href="{% url 'add_emp' %}"><i class="fas fa-plus me-1"></i> Add Employee</a>
+                    <a class="btn btn-outline-secondary" href="{% url 'all_emp' %}"><i class="fas fa-users me-1"></i> All Employees</a>
+                    <a class="btn btn-outline-primary" href="{% url 'export_csv' %}"><i class="fas fa-file-csv me-1"></i> Export CSV</a>
+                    <a class="btn btn-outline-primary" href="{% url 'export_excel' %}"><i class="fas fa-file-excel me-1"></i> Export Excel</a>
+                </div>
             </div>
         </div>
     </div>
@@ -58,16 +63,46 @@
     </div>
 </div>
 
-<div class="row mt-3">
-    <div class="col-12">
+<!-- Removed duplicate KPI cards to avoid showing same metrics twice -->
+
+<div class="row mt-4">
+    <div class="col-lg-8">
+        <div class="card p-3 shadow-sm mb-3">
+            <h6>Hires by Month</h6>
+            {% if chart_hires %}
+                <img src="data:image/png;base64,{{ chart_hires }}" class="img-fluid" alt="Hires by Month">
+            {% else %}
+                <div class="text-muted">No hire data available.</div>
+            {% endif %}
+        </div>
+
         <div class="card p-3 shadow-sm">
-            <h5 class="mb-3">Quick Actions</h5>
-            <div class="d-flex flex-wrap gap-2">
-                <a class="btn btn-outline-success" href="{% url 'add_emp' %}"><i class="fas fa-file-upload me-2"></i> Upload Resume</a>
-                <a class="btn btn-outline-primary" href="{% url 'export_csv' %}"><i class="fas fa-file-csv me-2"></i> Export CSV</a>
-                <a class="btn btn-outline-primary" href="{% url 'export_excel' %}"><i class="fas fa-file-excel me-2"></i> Export Excel</a>
-                <a class="btn btn-outline-secondary" href="{% url 'all_emp' %}"><i class="fas fa-table me-2"></i> View All</a>
-            </div>
+            <h6>Employees by Department</h6>
+            {% if chart_dept %}
+                <img src="data:image/png;base64,{{ chart_dept }}" class="img-fluid" alt="Employees by Department">
+            {% else %}
+                <div class="text-muted">No department data available.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card p-3 shadow-sm mb-3">
+            <h6>Salary Distribution</h6>
+            {% if chart_salary %}
+                <img src="data:image/png;base64,{{ chart_salary }}" class="img-fluid" alt="Salary Distribution">
+            {% else %}
+                <div class="text-muted">No salary data available.</div>
+            {% endif %}
+        </div>
+
+        <div class="card p-3 shadow-sm">
+            <h6>Summary</h6>
+            <ul class="list-unstyled mb-0">
+                <li>Average Salary: <strong>₹{{ avg_salary|default:0 }}</strong></li>
+                <li>Open Positions: <strong>5</strong></li>
+                <li>Resumes Uploaded: <strong>{{ resumes_count|default:0 }}</strong></li>
+            </ul>
         </div>
     </div>
 </div>
